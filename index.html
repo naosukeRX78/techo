@@ -1,0 +1,640 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="一日帖">
+<meta name="theme-color" content="#f5f4ef" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16171a" media="(prefers-color-scheme: dark)">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>一日帖</title>
+<style>
+/* Layout: 紙の手帳。1日1ページ（予定・やること・方眼メモ・写真）＋月・週・年。インクの紺と、日曜・祝日の朱、土曜の藍 */
+:root{
+  --paper:#f5f4ef; --page:#fbfaf7; --ink:#23262c; --ink-2:#5b5f68; --ink-3:#9a9da4; --rule:#e2e0d8;
+  --grid:rgba(70,115,170,.13); --accent:#2f4f86; --accent-soft:rgba(47,79,134,.10); --sun:#c2453a; --sat:#3a62a8; --tax:#7a5a1e; --tax-bg:rgba(196,150,60,.16);
+  --f-ui:"Hiragino Sans","Hiragino Kaku Gothic ProN","BIZ UDPGothic","Yu Gothic UI","Meiryo",system-ui,sans-serif;
+  --f-min:"Hiragino Mincho ProN","Yu Mincho","BIZ UDPMincho","Noto Serif JP",serif;
+  --f-num:"Avenir Next","Avenir","Helvetica Neue","Segoe UI",system-ui,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root{
+  --paper:#16171a; --page:#1c1d21; --ink:#e7e6e2; --ink-2:#a9aab0; --ink-3:#6c6e75; --rule:#2c2d33;
+  --grid:rgba(120,160,220,.10); --accent:#8fb0ea; --accent-soft:rgba(143,176,234,.14); --sun:#ef7f73; --sat:#8fb0ea; --tax:#e2bf78; --tax-bg:rgba(226,191,120,.14); color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--paper);color:var(--ink)}
+body{font-family:var(--f-ui);font-size:15px;line-height:1.6;-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+button{font:inherit;color:inherit}
+.wrap{max-width:640px;margin:0 auto;padding:calc(env(safe-area-inset-top,0px) + 8px) 14px calc(env(safe-area-inset-bottom,0px) + 84px)}
+
+/* ---- 1日ページ ---- */
+.dayhead{display:grid;grid-template-columns:auto 1fr auto;align-items:end;gap:12px;padding:6px 2px 12px;border-bottom:2px solid var(--ink)}
+.dnum{font-family:var(--f-num);font-weight:600;font-size:64px;line-height:.9;letter-spacing:-.03em;font-variant-numeric:tabular-nums}
+.dnum small{font-size:24px;font-weight:500;color:var(--ink-2);margin-right:4px;letter-spacing:0}
+.dmeta{display:grid;gap:1px;padding-bottom:4px}
+.dmeta .w{font-family:var(--f-min);font-size:22px;font-weight:600}
+.dmeta .s{font-size:12px;color:var(--ink-2);font-family:var(--f-num)}
+.dnav{display:flex;gap:4px;padding-bottom:6px}
+.dnav button{width:38px;height:38px;border-radius:50%;border:1px solid var(--rule);background:var(--page);display:grid;place-items:center}
+.dnav svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.badge{font-size:12px;border-radius:999px;padding:2px 10px;border:1px solid var(--rule);background:var(--page);color:var(--ink-2)}
+.badge.hol{color:var(--sun);border-color:currentColor}
+.badge.tax{color:var(--tax);background:var(--tax-bg);border-color:transparent}
+.sec{margin-top:16px}
+.sec>.h{display:flex;align-items:baseline;justify-content:space-between;font-family:var(--f-min);font-size:14px;font-weight:600;letter-spacing:.12em;color:var(--ink-2);padding-bottom:4px;border-bottom:1px solid var(--rule)}
+.sec>.h button{font-family:var(--f-ui);font-size:13px;letter-spacing:0;background:none;border:0;color:var(--accent);padding:4px 2px}
+.ev{display:grid;grid-template-columns:4.6em 1fr 28px;gap:8px;align-items:center;padding:4px 0;border-bottom:1px dashed var(--rule)}
+.ev input,.td input[type=text]{width:100%;border:0;background:none;font:inherit;color:var(--ink);padding:6px 0}
+.ev input[type=time]{font-family:var(--f-num);font-variant-numeric:tabular-nums;color:var(--accent);font-weight:600}
+.td{display:grid;grid-template-columns:28px 1fr 28px;gap:6px;align-items:center;padding:2px 0;border-bottom:1px dashed var(--rule)}
+.td input[type=checkbox]{width:20px;height:20px;accent-color:var(--accent)}
+.td.done input[type=text]{color:var(--ink-3);text-decoration:line-through}
+.x{background:none;border:0;color:var(--ink-3);font-size:18px;line-height:1;padding:4px}
+input:focus,textarea:focus{outline:none}
+.ev:focus-within,.td:focus-within{background:var(--accent-soft)}
+.grid{position:relative;background-color:var(--page);background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);background-size:16px 16px;background-position:-1px -1px;border:1px solid var(--rule);border-radius:4px}
+textarea.memo{display:block;width:100%;min-height:300px;border:0;background:transparent;resize:vertical;font:16px/32px var(--f-ui);color:var(--ink);padding:0 12px;margin-top:0}
+.mood{display:flex;gap:6px;flex-wrap:wrap}
+.mood button{border:1px solid var(--rule);background:var(--page);border-radius:10px;padding:6px 10px;display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ink-2)}
+.mood button.on{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.mood svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.photo{margin-top:8px}
+.photo img{display:block;max-width:100%;border-radius:4px;border:6px solid var(--page);box-shadow:0 1px 3px rgba(0,0,0,.15);transform:rotate(-.6deg)}
+.pbtn{display:inline-flex;align-items:center;gap:6px;border:1px dashed var(--ink-3);border-radius:10px;padding:10px 14px;color:var(--ink-2);background:none;font-size:14px}
+.pbtn input{display:none}
+.foot3{display:flex;justify-content:space-between;margin-top:18px;font-size:11.5px;color:var(--ink-3);font-family:var(--f-num)}
+
+/* ---- 月 ---- */
+.mhead{display:flex;align-items:center;justify-content:space-between;padding:6px 2px 10px}
+.mhead h1{margin:0;font-family:var(--f-num);font-size:34px;font-weight:600;letter-spacing:-.02em}
+.mhead h1 small{font-family:var(--f-min);font-size:15px;color:var(--ink-2);margin-left:8px;font-weight:600}
+.cal{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-top:2px solid var(--ink);border-left:1px solid var(--rule)}
+.cal .wd{font-size:11px;text-align:center;padding:4px 0;color:var(--ink-2);border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);font-weight:600}
+.cell{min-height:86px;border-right:1px solid var(--rule);border-bottom:1px solid var(--rule);padding:3px 3px 4px;background:var(--page);text-align:left;display:flex;flex-direction:column;gap:2px;overflow:hidden;border-top:0;border-left:0}
+.cell.out{background:transparent;opacity:.45}
+.cell .n{font-family:var(--f-num);font-weight:600;font-size:15px;line-height:1.2;display:flex;align-items:center;gap:3px}
+.cell.today .n span{background:var(--ink);color:var(--paper);border-radius:50%;width:22px;height:22px;display:inline-grid;place-items:center;font-size:13px}
+.cell .l{font-size:10px;line-height:1.3;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ink-2)}
+.cell .l.tax{color:var(--tax)}
+.cell .l.hol{color:var(--sun)}
+.cell .dot{width:5px;height:5px;border-radius:50%;background:var(--accent);display:inline-block}
+.sun{color:var(--sun)} .sat{color:var(--sat)}
+
+/* ---- 週 ---- */
+.wk{display:grid;border-top:2px solid var(--ink)}
+.wd2{display:grid;grid-template-columns:3.6em 1fr;gap:10px;padding:10px 2px;border-bottom:1px solid var(--rule);text-align:left;background:none;border-left:0;border-right:0;border-top:0;width:100%}
+.wd2 .dn{font-family:var(--f-num);font-size:26px;font-weight:600;line-height:1;text-align:center}
+.wd2 .dn small{display:block;font-size:11px;font-weight:500;margin-top:3px}
+.wd2 .ul{display:grid;gap:2px;font-size:13.5px;min-width:0}
+.wd2 .li{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wd2 .li b{font-family:var(--f-num);color:var(--accent);font-weight:600;margin-right:6px}
+.wd2 .em{color:var(--ink-3);font-size:12.5px}
+.wd2.today{background:var(--accent-soft)}
+
+/* ---- 年 ---- */
+.yr{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px}
+.ym{background:var(--page);border:1px solid var(--rule);border-radius:6px;padding:8px;text-align:left}
+.ym .h3{display:block;margin:0 0 4px;font-family:var(--f-num);font-size:16px;font-weight:700}
+.ym .g{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;font-family:var(--f-num);font-size:10px;text-align:center}
+.ym .g span{padding:2px 0;border-radius:3px}
+.ym .g span.has{background:var(--accent);color:var(--page)}
+.ym .g span.td{outline:1.5px solid var(--ink)}
+
+/* ---- 設定 ---- */
+.card{background:var(--page);border:1px solid var(--rule);border-radius:12px;padding:14px 16px;margin-top:12px;display:grid;gap:10px}
+.card h2{margin:0;font-family:var(--f-min);font-size:15px}
+.chk{display:flex;align-items:center;gap:10px;font-size:14px}
+.chk input{width:20px;height:20px;accent-color:var(--accent)}
+select,input[type=search]{width:100%;font:15px var(--f-ui);color:var(--ink);background:var(--paper);border:1px solid var(--rule);border-radius:8px;padding:9px 10px}
+.btn{border:1px solid var(--accent);color:var(--accent);background:none;border-radius:10px;padding:10px 14px;font-size:14px;font-weight:600}
+.btn.fill{background:var(--accent);color:var(--page)}
+.note{font-size:12px;color:var(--ink-2);line-height:1.7}
+.hit{display:block;width:100%;text-align:left;background:none;border:0;border-bottom:1px solid var(--rule);padding:8px 0;font-size:14px}
+.hit b{font-family:var(--f-num);color:var(--accent);margin-right:8px}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom,0px) + 80px);transform:translateX(-50%);background:var(--ink);color:var(--paper);font-size:13px;border-radius:999px;padding:7px 16px;z-index:30}
+.toast:empty{display:none}
+
+nav.tabs{position:fixed;left:0;right:0;bottom:0;z-index:20;display:flex;justify-content:center;background:color-mix(in srgb,var(--paper) 92%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);border-top:1px solid var(--rule);padding:6px 8px calc(env(safe-area-inset-bottom,0px) + 6px)}
+nav.tabs div{display:flex;max-width:640px;width:100%}
+nav.tabs button{flex:1;background:none;border:0;color:var(--ink-3);font-size:11.5px;font-weight:600;padding:6px 0 4px;display:grid;justify-items:center;gap:2px}
+nav.tabs svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+nav.tabs button.on{color:var(--ink)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ===== 1日 ===== -->
+<section id="v-day">
+  <div class="dayhead">
+    <div class="dnum" id="dNum"></div>
+    <div class="dmeta"><span class="w" id="dW"></span><span class="s" id="dS"></span></div>
+    <div class="dnav"><button type="button" id="prevD" aria-label="前の日"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><button type="button" id="nextD" aria-label="次の日"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button></div>
+  </div>
+  <div class="badges" id="dBadges"></div>
+
+  <div class="sec"><div class="h">予定<button type="button" id="addEv">＋ 追加</button></div><div id="evs"></div></div>
+  <div class="sec"><div class="h">やること<button type="button" id="addTd">＋ 追加</button></div><div id="tds"></div></div>
+  <div class="sec"><div class="h">メモ</div><div class="grid"><textarea class="memo" id="memo" placeholder="今日のこと、思いついたこと、なんでも。" aria-label="メモ"></textarea></div></div>
+  <div class="sec"><div class="h">天気と気分</div><div class="mood" id="weather" style="margin-top:8px"></div><div class="mood" id="feel" style="margin-top:8px"></div></div>
+  <div class="sec"><div class="h">今日の1枚<button type="button" id="delPh" hidden>写真を外す</button></div>
+    <div class="photo" id="photo"></div>
+    <label class="pbtn" id="phBtn"><input type="file" accept="image/*" id="phIn">＋ 写真を貼る</label>
+  </div>
+  <div class="foot3"><span id="fL"></span><span id="fR"></span></div>
+</section>
+
+<!-- ===== 月 ===== -->
+<section id="v-month" hidden>
+  <div class="mhead"><h1 id="mT"></h1><div class="dnav"><button type="button" id="prevM" aria-label="前の月"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><button type="button" id="nextM" aria-label="次の月"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button></div></div>
+  <div class="cal" id="cal"></div>
+</section>
+
+<!-- ===== 週 ===== -->
+<section id="v-week" hidden>
+  <div class="mhead"><h1 id="wT"></h1><div class="dnav"><button type="button" id="prevW" aria-label="前の週"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><button type="button" id="nextW" aria-label="次の週"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button></div></div>
+  <div class="wk" id="wk"></div>
+</section>
+
+<!-- ===== 年 ===== -->
+<section id="v-year" hidden>
+  <div class="mhead"><h1 id="yT"></h1><div class="dnav"><button type="button" id="prevY" aria-label="前の年"><svg viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button><button type="button" id="nextY" aria-label="次の年"><svg viewBox="0 0 24 24"><path d="M9 5l7 7-7 7"/></svg></button></div></div>
+  <div class="yr" id="yr"></div>
+  <p class="note" style="margin-top:12px">色の付いた日は、予定・やること・メモ・写真のどれかが書いてある日です。</p>
+</section>
+
+<!-- ===== 設定 ===== -->
+<section id="v-set" hidden>
+  <div class="card"><h2>さがす</h2><input type="search" id="q" placeholder="予定・やること・メモから検索" aria-label="検索"><div id="hits"></div></div>
+  <div class="card"><h2>税務の期限を手帳に表示</h2>
+    <label class="chk"><input type="checkbox" id="sTax">表示する</label>
+    <select id="sFm" aria-label="決算月"><option value="0">法人の決算月：表示しない</option></select>
+    <label class="chk"><input type="checkbox" id="sNou">源泉所得税は納期の特例</label>
+    <p class="note">土日・祝日・年末年始に当たる期限は翌日に繰り越して表示します。</p></div>
+  <div class="card"><h2>週の始まり</h2><select id="sWs"><option value="1">月曜日</option><option value="0">日曜日</option></select></div>
+  <div class="card"><h2>バックアップ</h2>
+    <p class="note">手帳の中身はこの iPhone の中だけに保存されています。機種変更や万一に備えて、月に1回ほど書き出して、ファイルアプリやパソコンに保存してください。</p>
+    <button class="btn fill" type="button" id="exp">バックアップを書き出す</button>
+    <label class="btn" style="text-align:center">バックアップから戻す<input type="file" accept="application/json,.json" id="imp" hidden></label>
+    <p class="note" id="stat"></p></div>
+</section>
+</div>
+<div class="toast" id="toast"></div>
+
+<nav class="tabs"><div>
+  <button type="button" data-tab="day" class="on"><svg viewBox="0 0 24 24"><rect x="5" y="3.5" width="14" height="17" rx="1.5"/><path d="M8.5 8h7M8.5 11.5h7M8.5 15h4"/></svg>1日</button>
+  <button type="button" data-tab="week"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><path d="M3.5 9h17M3.5 13h17M3.5 17h17"/></svg>週</button>
+  <button type="button" data-tab="month"><svg viewBox="0 0 24 24"><rect x="3.5" y="4.5" width="17" height="15" rx="1.5"/><path d="M3.5 9h17M9 9v10.5M15 9v10.5M3.5 14h17"/></svg>月</button>
+  <button type="button" data-tab="year"><svg viewBox="0 0 24 24"><rect x="3.5" y="3.5" width="7" height="7" rx="1"/><rect x="13.5" y="3.5" width="7" height="7" rx="1"/><rect x="3.5" y="13.5" width="7" height="7" rx="1"/><rect x="13.5" y="13.5" width="7" height="7" rx="1"/></svg>年</button>
+  <button type="button" data-tab="set"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="M20 20l-4.5-4.5"/></svg>検索・設定</button>
+</div></nav>
+
+<script>
+/* 税務早見 計算ロジック（令和8年10月時点） */
+var TZ = (function(){
+  /* ---------- 印紙税 ---------- */
+  // [上限(以下), 税額]。上限 Infinity は「超」。nonTaxBelow 未満は非課税
+  const STAMP = {
+    d1: {name:'第1号 不動産譲渡・金銭消費貸借・運送等の契約書', nonTaxBelow:10000, none:200,
+         t:[[100000,200],[500000,400],[1000000,1000],[5000000,2000],[10000000,10000],[50000000,20000],[100000000,60000],[500000000,100000],[1000000000,200000],[5000000000,400000],[Infinity,600000]]},
+    d1r:{name:'第1号の1 不動産譲渡契約書（軽減措置）', nonTaxBelow:10000, none:200, base:'d1',
+         t:[[100000,200],[500000,200],[1000000,500],[5000000,1000],[10000000,5000],[50000000,10000],[100000000,30000],[500000000,60000],[1000000000,160000],[5000000000,320000],[Infinity,480000]]},
+    d2: {name:'第2号 請負に関する契約書', nonTaxBelow:10000, none:200,
+         t:[[1000000,200],[2000000,400],[3000000,1000],[5000000,2000],[10000000,10000],[50000000,20000],[100000000,60000],[500000000,100000],[1000000000,200000],[5000000000,400000],[Infinity,600000]]},
+    d2r:{name:'第2号 建設工事の請負契約書（軽減措置）', nonTaxBelow:10000, none:200, base:'d2',
+         t:[[1000000,200],[2000000,200],[3000000,500],[5000000,1000],[10000000,5000],[50000000,10000],[100000000,30000],[500000000,60000],[1000000000,160000],[5000000000,320000],[Infinity,480000]]},
+    d3: {name:'第3号 約束手形・為替手形', nonTaxBelow:100000, none:200,
+         t:[[1000000,200],[2000000,400],[3000000,600],[5000000,1000],[10000000,2000],[20000000,4000],[30000000,6000],[50000000,10000],[100000000,20000],[200000000,40000],[300000000,60000],[500000000,100000],[1000000000,150000],[Infinity,200000]]},
+    d17:{name:'第17号の1 売上代金の受取書（領収書）', nonTaxBelow:50000, none:200,
+         t:[[1000000,200],[2000000,400],[3000000,600],[5000000,1000],[10000000,2000],[20000000,4000],[30000000,6000],[50000000,10000],[100000000,20000],[200000000,40000],[300000000,60000],[500000000,100000],[1000000000,150000],[Infinity,200000]]},
+  };
+  const STAMP_FIXED = [
+    ['第5号 合併契約書・吸収分割契約書等', 40000], ['第6号 定款（紙の原本のみ。電子定款は不要）', 40000],
+    ['第7号 継続的取引の基本となる契約書', 4000], ['第13号 債務の保証に関する契約書', 200],
+    ['第15号 債権譲渡・債務引受契約書', 200], ['第17号の2 売上代金以外の受取書（5万円以上）', 200],
+    ['第19号 預貯金通帳等', 400], ['第20号 判取帳', 4000],
+  ];
+  const STAMP_RELIEF_END = '2027-03-31'; // 令和9年3月31日までに作成
+  function stamp(kind, amount, hasAmount){
+    const T = STAMP[kind];
+    if (!hasAmount) return {tax:T.none, note:'契約金額の記載がない場合'};
+    if (amount < T.nonTaxBelow) return {tax:0, note:'非課税（'+(T.nonTaxBelow/10000)+'万円未満）'};
+    for (const [lim,v] of T.t) if (amount <= lim) {
+      let base = null;
+      if (T.base){ for (const [l2,v2] of STAMP[T.base].t) if (amount <= l2){ base = v2; break } }
+      return {tax:v, base};
+    }
+  }
+
+  /* ---------- 源泉徴収（報酬・料金） ---------- */
+  const fl = Math.floor;
+  function hoshu(kind, x, opt){
+    opt = opt || {};
+    x = fl(x || 0);
+    if (kind === 'general'){            // 原稿料・講演料・デザイン料・士業（弁護士・税理士・社労士等）
+      return x <= 1000000 ? fl(x * 0.1021) : fl((x - 1000000) * 0.2042) + 102100;
+    }
+    if (kind === 'shiho'){              // 司法書士・土地家屋調査士・海事代理士
+      return fl(Math.max(0, x - 10000) * 0.1021);
+    }
+    if (kind === 'gaiko'){              // 外交員等（同月の給与がある場合は控除額から差し引く）
+      return fl(Math.max(0, x - Math.max(0, 120000 - (opt.salary || 0))) * 0.1021);
+    }
+    if (kind === 'hostess'){            // ホステス等（5,000円×計算期間の日数）
+      return fl(Math.max(0, x - 5000 * (opt.days || 0)) * 0.1021);
+    }
+    return 0;
+  }
+
+  /* ---------- 退職所得 ---------- */
+  const RATE = [[1949000,0.05,0],[3299000,0.10,97500],[6949000,0.20,427500],[8999000,0.23,636000],[17999000,0.33,1536000],[39999000,0.40,2796000],[Infinity,0.45,4796000]];
+  function incomeTax(t){ for (const [lim,r,k] of RATE) if (t <= lim) return Math.max(0, Math.round(t*r) - k); return 0 }
+  function taishoku(o){
+    const x = fl(o.amount || 0), y = Math.max(1, Math.ceil(o.years || 1));
+    let kojo = y <= 20 ? Math.max(800000, 400000 * y) : 8000000 + 700000 * (y - 20);
+    if (o.shogai) kojo += 1000000;
+    const A = Math.max(0, x - kojo);
+    let shotoku, kind;
+    if (o.yakuin && y <= 5){ shotoku = A; kind = '特定役員退職手当等（1/2なし）' }
+    else if (!o.yakuin && y <= 5){ shotoku = A <= 3000000 ? A / 2 : 1500000 + (A - 3000000); kind = '短期退職手当等（300万円超の部分は1/2なし）' }
+    else { shotoku = A / 2; kind = '一般の退職手当等（1/2課税）' }
+    const taxable = fl(shotoku / 1000) * 1000;
+    let it, itNote = '';
+    if (o.noShinkoku){ it = fl(x * 0.2042); itNote = '「退職所得の受給に関する申告書」の提出なし：支払額×20.42%' }
+    else it = fl(incomeTax(taxable) * 1021 / 1000);
+    const shi = fl(taxable * 0.06 / 100) * 100, ken = fl(taxable * 0.04 / 100) * 100;
+    return {x, years:y, kojo, A, kind, taxable, it, itNote, shi, ken, jumin: shi + ken, net: x - it - shi - ken};
+  }
+
+  /* ---------- 減価償却 ---------- */
+  // 平成19年4月1日以後取得の定額法償却率／平成24年4月1日以後取得の定率法（償却率・改定償却率・保証率）
+  const DEP = {
+    2:[0.500,1.000,null,null],3:[0.334,0.667,1.000,0.11089],4:[0.250,0.500,1.000,0.12499],5:[0.200,0.400,0.500,0.10800],
+    6:[0.167,0.333,0.334,0.09911],7:[0.143,0.286,0.334,0.08680],8:[0.125,0.250,0.334,0.07909],9:[0.112,0.222,0.250,0.07126],
+    10:[0.100,0.200,0.250,0.06552],11:[0.091,0.182,0.200,0.05992],12:[0.084,0.167,0.200,0.05566],13:[0.077,0.154,0.167,0.05180],
+    14:[0.072,0.143,0.167,0.04854],15:[0.067,0.133,0.143,0.04565],16:[0.063,0.125,0.143,0.04294],17:[0.059,0.118,0.125,0.04038],
+    18:[0.056,0.111,0.112,0.03884],19:[0.053,0.105,0.112,0.03693],20:[0.050,0.100,0.112,0.03486],21:[0.048,0.095,0.100,0.03335],
+    22:[0.046,0.091,0.100,0.03182],23:[0.044,0.087,0.091,0.03052],24:[0.042,0.083,0.084,0.02969],25:[0.040,0.080,0.084,0.02841],
+    26:[0.039,0.077,0.084,0.02716],27:[0.038,0.074,0.077,0.02624],28:[0.036,0.071,0.072,0.02568],29:[0.035,0.069,0.072,0.02463],
+    30:[0.034,0.067,0.072,0.02366],31:[0.033,0.065,0.067,0.02286],32:[0.032,0.063,0.067,0.02216],33:[0.031,0.061,0.063,0.02161],
+    34:[0.030,0.059,0.063,0.02097],35:[0.029,0.057,0.059,0.02051],36:[0.028,0.056,0.059,0.01974],37:[0.028,0.054,0.056,0.01950],
+    38:[0.027,0.053,0.056,0.01882],39:[0.026,0.051,0.053,0.01860],40:[0.025,0.050,0.053,0.01791],41:[0.025,0.049,0.050,0.01741],
+    42:[0.024,0.048,0.050,0.01694],43:[0.024,0.047,0.048,0.01664],44:[0.023,0.045,0.046,0.01664],45:[0.023,0.044,0.046,0.01634],
+    46:[0.022,0.043,0.044,0.01601],47:[0.022,0.043,0.044,0.01532],48:[0.021,0.042,0.044,0.01499],49:[0.021,0.041,0.042,0.01475],
+    50:[0.020,0.040,0.042,0.01440]
+  };
+  // 償却スケジュール（期の月数12、初年度は使用月数で月割り。残存簿価1円）
+  function schedule(cost, n, method, firstMonths, maxYears){
+    const R = DEP[n]; if (!R || !cost) return [];
+    const rows = []; let book = cost; const m1 = Math.min(12, Math.max(1, firstMonths || 12));
+    const hosho = method === 'teiritsu' && R[3] ? Math.ceil(cost * R[3]) : 0;
+    let kaitei = null; let y = 1;
+    while (book > 1 && y <= (maxYears || 60)){
+      const months = y === 1 ? m1 : 12;
+      let dep, note = '';
+      if (method === 'teigaku'){
+        dep = Math.ceil(cost * R[0] * months / 12);
+      } else {
+        if (n === 2){ dep = Math.ceil(book * R[1] * months / 12) }
+        else {
+          const chosei = Math.ceil(book * R[1]);
+          if (kaitei === null && chosei < hosho){ kaitei = book }
+          if (kaitei !== null){ dep = Math.ceil(kaitei * R[2] * months / 12); note = '改定償却率' }
+          else dep = Math.ceil(book * R[1] * months / 12);
+        }
+      }
+      dep = Math.min(dep, book - 1);
+      book -= dep;
+      rows.push({y, months, dep, book, note});
+      y++;
+    }
+    return rows;
+  }
+  // 中古資産の簡便法
+  function chuko(hotei, keikaY, keikaM){
+    const hM = hotei * 12, kM = (keikaY || 0) * 12 + (keikaM || 0);
+    let m = kM >= hM ? hM * 0.2 : (hM - kM) + kM * 0.2;
+    let yrs = Math.floor(m / 12);
+    return Math.max(2, yrs);
+  }
+
+  /* ---------- 消費税 ---------- */
+  const KANI = [
+    {k:1, rate:90, t:'第1種', d:'卸売業（他の事業者に販売）'},
+    {k:2, rate:80, t:'第2種', d:'小売業（消費者に販売）、農林漁業のうち飲食料品の譲渡'},
+    {k:3, rate:70, t:'第3種', d:'農林漁業（飲食料品以外）、鉱業、建設業、製造業、電気・ガス・水道業'},
+    {k:4, rate:60, t:'第4種', d:'飲食店業、その他（第1〜3・5・6種以外。固定資産の売却など）'},
+    {k:5, rate:50, t:'第5種', d:'運輸通信業、金融・保険業、サービス業（飲食店業を除く）'},
+    {k:6, rate:40, t:'第6種', d:'不動産業'},
+  ];
+  const KANI_EX = [
+    ['建設業（材料を自分で調達）',3],['建設業（材料の無償支給を受けた加工・人工のみ）',4],['製造業（自社製造の小売含む）',3],
+    ['製造業の加工賃（材料支給）',4],['小売店（仕入れた商品をそのまま消費者へ）',2],['卸売（事業者へ販売）',1],
+    ['飲食店・喫茶店',4],['テイクアウト・出前（飲食料品の小売）',2],['美容院・理容',5],['クリーニング',5],
+    ['税理士・弁護士などの士業',5],['コンサルタント・設計',5],['運送業・タクシー',5],['不動産仲介・賃貸',6],
+    ['駐車場（時間貸し）',6],['自動車整備・修理',5],['農業（飲食料品）',2],['農業（花き・飲食料品以外）',3],
+    ['事業用の車両・設備の売却',4],['ソフトウェア開発・ITサービス',5],
+  ];
+  // 免税事業者等からの課税仕入れの経過措置
+  function keika(dateStr){
+    const d = dateStr;
+    if (d < '2023-10-01') return {rate:100, label:'インボイス制度前（全額控除）'};
+    if (d <= '2026-09-30') return {rate:80, label:'令和5年10月1日〜令和8年9月30日'};
+    if (d <= '2028-09-30') return {rate:70, label:'令和8年10月1日〜令和10年9月30日'};
+    if (d <= '2030-09-30') return {rate:50, label:'令和10年10月1日〜令和12年9月30日'};
+    if (d <= '2031-09-30') return {rate:30, label:'令和12年10月1日〜令和13年9月30日'};
+    return {rate:0, label:'令和13年10月1日以後（控除不可）'};
+  }
+  // 納付税額（国税・地方税）
+  function shohi(o){
+    // o: {s10, s8 税込売上, p10, p8 税込課税仕入, kani 事業区分(1-6)}
+    const k10 = fl((o.s10 || 0) * 100 / 110 / 1000) * 1000, k8 = fl((o.s8 || 0) * 100 / 108 / 1000) * 1000;
+    const uri = fl(k10 * 0.078) + fl(k8 * 0.0624);
+    const shiire = fl((o.p10 || 0) * 7.8 / 110) + fl((o.p8 || 0) * 6.24 / 108);
+    const chihou = v => fl(v * 22 / 78 / 100) * 100;
+    const res = {};
+    const genso = fl(Math.max(0, uri - shiire) / 100) * 100;
+    res.gensoku = {kuni:genso, chihou:chihou(genso)};
+    const mr = (KANI.find(x => x.k === +o.kani) || KANI[4]).rate;
+    const kani = fl((uri - fl(uri * mr / 100)) / 100) * 100;
+    res.kani = {kuni:kani, chihou:chihou(kani), rate:mr};
+    const niwari = fl((uri - fl(uri * 0.8)) / 100) * 100;
+    res.niwari = {kuni:niwari, chihou:chihou(niwari)};
+    const sanwari = fl((uri - fl(uri * 0.7)) / 100) * 100;
+    res.sanwari = {kuni:sanwari, chihou:chihou(sanwari)};
+    res.uri = uri; res.shiire = shiire; res.k10 = k10; res.k8 = k8;
+    for (const key of ['gensoku','kani','niwari','sanwari']) res[key].total = res[key].kuni + res[key].chihou;
+    return res;
+  }
+
+  /* ---------- 期限 ---------- */
+  const HOL = new Set(['2026-01-01','2026-01-12','2026-02-11','2026-02-23','2026-03-20','2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-05-06',
+    '2026-07-20','2026-08-11','2026-09-21','2026-09-22','2026-09-23','2026-10-12','2026-11-03','2026-11-23',
+    '2027-01-01','2027-01-11','2027-02-11','2027-02-23','2027-03-21','2027-03-22','2027-04-29','2027-05-03','2027-05-04','2027-05-05',
+    '2027-07-19','2027-08-11','2027-09-20','2027-09-23','2027-10-11','2027-11-03','2027-11-23','2028-01-01','2028-01-10']);
+  const iso = d => d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  function isOff(d){
+    const w = d.getDay(), m = d.getMonth()+1, day = d.getDate();
+    return w === 0 || w === 6 || HOL.has(iso(d)) || (m === 12 && day >= 29) || (m === 1 && day <= 3);
+  }
+  // 国税通則法10条2項：期限が土日・祝日・12/29〜1/3なら翌日
+  function shift(d){ d = new Date(d); while (isOff(d)) d.setDate(d.getDate()+1); return d }
+  const lastDay = (y, m) => new Date(y, m, 0).getDate(); // m: 1-12
+  function addMonthsEnd(y, m, add){ // 月末日（m月末からadd月後の月末）
+    const t = new Date(y, m - 1 + add, 1); return new Date(t.getFullYear(), t.getMonth(), lastDay(t.getFullYear(), t.getMonth()+1));
+  }
+  function deadlines(from, opt){
+    opt = opt || {};
+    const out = [], start = new Date(from), end = new Date(start); end.setMonth(end.getMonth() + 13);
+    const add = (d, title, sub, tag) => { const s = shift(d); if (s >= start && s < end) out.push({date:s, orig:d, title, sub, tag}) };
+    for (let y = start.getFullYear() - 1; y <= start.getFullYear() + 1; y++){
+      for (let m = 1; m <= 12; m++){
+        if (!opt.nouki) add(new Date(y, m, 10), '源泉所得税の納付', `${m}月支払分`, '源泉');
+      }
+      if (opt.nouki){
+        add(new Date(y, 6, 10), '源泉所得税の納付（納期の特例）', `${y}年1〜6月支払分`, '源泉');
+        add(new Date(y+1, 0, 20), '源泉所得税の納付（納期の特例）', `${y}年7〜12月支払分`, '源泉');
+      }
+      add(new Date(y, 0, 31), '法定調書・給与支払報告書・償却資産申告', `${y-1}年分`, '年次');
+      add(new Date(y, 2, 15), '所得税・贈与税の確定申告', `${y-1}年分（贈与税は2/1〜）`, '個人');
+      add(new Date(y, 2, 31), '個人事業者の消費税の確定申告', `${y-1}年分`, '個人');
+      add(new Date(y, 6, 31), '所得税の予定納税（第1期）', `${y}年分`, '個人');
+      add(new Date(y, 10, 30), '所得税の予定納税（第2期）', `${y}年分`, '個人');
+      add(new Date(y, 6, 10), '労働保険の年度更新・社会保険の算定基礎届', '6/1〜7/10（算定基礎届は7/1〜）', '社保');
+      // 法人（決算月）
+      if (opt.fm){
+        const fm = opt.fm;
+        const kakutei = addMonthsEnd(y, fm, 2);
+        add(kakutei, '法人税・消費税等の確定申告', `${y}年${fm}月決算${opt.encho ? '（法人税・消費税は延長特例で1か月後）' : ''}`, '法人');
+        if (opt.encho) add(addMonthsEnd(y, fm, 3), '確定申告（延長特例適用時）', `${y}年${fm}月決算`, '法人');
+        const chukan = addMonthsEnd(y, fm, 8); // 期首から6か月経過後2か月以内
+        add(chukan, '法人税・消費税の中間申告', `${y}年${fm}月決算の翌期・上半期分（前期実績による）`, '法人');
+      }
+    }
+    return out.sort((a,b) => a.date - b.date);
+  }
+
+  return {STAMP, STAMP_FIXED, STAMP_RELIEF_END, stamp, hoshu, taishoku, incomeTax, DEP, schedule, chuko, KANI, KANI_EX, keika, shohi, deadlines, shift, iso, isOff};
+})();
+if (typeof module !== 'undefined') module.exports = TZ;
+
+</script>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+const pad=n=>String(n).padStart(2,'0');
+const key=d=>d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate());
+const parse=k=>{const [y,m,d]=k.split('-').map(Number);return new Date(y,m-1,d)};
+const W='日月火水木金土',WJ=['日曜日','月曜日','火曜日','水曜日','木曜日','金曜日','土曜日'];
+const toast=t=>{$('toast').textContent=t;setTimeout(()=>{$('toast').textContent=''},1800)};
+
+/* ---------- 祝日（名前つき） ---------- */
+const HOLN={'2026-01-01':'元日','2026-01-12':'成人の日','2026-02-11':'建国記念の日','2026-02-23':'天皇誕生日','2026-03-20':'春分の日','2026-04-29':'昭和の日',
+ '2026-05-03':'憲法記念日','2026-05-04':'みどりの日','2026-05-05':'こどもの日','2026-05-06':'振替休日','2026-07-20':'海の日','2026-08-11':'山の日',
+ '2026-09-21':'敬老の日','2026-09-22':'国民の休日','2026-09-23':'秋分の日','2026-10-12':'スポーツの日','2026-11-03':'文化の日','2026-11-23':'勤労感謝の日',
+ '2027-01-01':'元日','2027-01-11':'成人の日','2027-02-11':'建国記念の日','2027-02-23':'天皇誕生日','2027-03-21':'春分の日','2027-03-22':'振替休日',
+ '2027-04-29':'昭和の日','2027-05-03':'憲法記念日','2027-05-04':'みどりの日','2027-05-05':'こどもの日','2027-07-19':'海の日','2027-08-11':'山の日',
+ '2027-09-20':'敬老の日','2027-09-23':'秋分の日','2027-10-11':'スポーツの日','2027-11-03':'文化の日','2027-11-23':'勤労感謝の日','2028-01-01':'元日','2028-01-10':'成人の日'};
+
+/* ---------- 保存（文字：localStorage／写真：IndexedDB） ---------- */
+const PFX='ich:';
+const CFG_K='ich-config';
+let CFG={tax:true,fm:0,nou:false,ws:1};
+try{CFG=Object.assign(CFG,JSON.parse(localStorage.getItem(CFG_K)||'{}'))}catch(e){}
+const saveCfg=()=>{try{localStorage.setItem(CFG_K,JSON.stringify(CFG))}catch(e){}};
+function load(k){try{return JSON.parse(localStorage.getItem(PFX+k)||'null')||{ev:[],td:[],memo:'',wx:'',feel:'',ph:false}}catch(e){return {ev:[],td:[],memo:'',wx:'',feel:'',ph:false}}}
+function isEmpty(o){return !o.ev.some(e=>e.x||e.t)&&!o.td.some(t=>t.x)&&!o.memo.trim()&&!o.wx&&!o.feel&&!o.ph}
+function store(k,o){try{if(isEmpty(o))localStorage.removeItem(PFX+k);else localStorage.setItem(PFX+k,JSON.stringify(o))}catch(e){toast('保存できませんでした（容量不足）')}}
+function allKeys(){const out=[];for(let i=0;i<localStorage.length;i++){const k=localStorage.key(i);if(k&&k.startsWith(PFX))out.push(k.slice(PFX.length))}return out.sort()}
+let db=null;
+function idb(){return new Promise(res=>{if(db)return res(db);try{const r=indexedDB.open('ichinichi',1);r.onupgradeneeded=()=>r.result.createObjectStore('ph');r.onsuccess=()=>{db=r.result;res(db)};r.onerror=()=>res(null)}catch(e){res(null)}})}
+async function phGet(k){const d=await idb();if(!d)return null;return new Promise(res=>{const q=d.transaction('ph').objectStore('ph').get(k);q.onsuccess=()=>res(q.result||null);q.onerror=()=>res(null)})}
+async function phPut(k,v){const d=await idb();if(!d)return false;return new Promise(res=>{const t=d.transaction('ph','readwrite');v?t.objectStore('ph').put(v,k):t.objectStore('ph').delete(k);t.oncomplete=()=>res(true);t.onerror=()=>res(false)})}
+
+/* ---------- 税務期限 ---------- */
+const taxCache={};
+function taxOn(k){
+  if(!CFG.tax||typeof TZ==='undefined')return [];
+  const d=parse(k),mk=d.getFullYear()+'-'+(d.getMonth()+1)+'|'+CFG.fm+'|'+CFG.nou;
+  if(!taxCache[mk]){taxCache[mk]={};TZ.deadlines(new Date(d.getFullYear(),d.getMonth(),1),{fm:+CFG.fm||0,nouki:!!CFG.nou}).forEach(x=>{const kk=TZ.iso(x.date);(taxCache[mk][kk]=taxCache[mk][kk]||[]).push(x)})}
+  return taxCache[mk][k]||[];
+}
+
+/* ---------- 状態 ---------- */
+let cur=key(new Date()),mCur=new Date(),wCur=new Date(),yCur=new Date().getFullYear(),tab='day';
+const today=()=>key(new Date());
+
+/* ---------- 1日ページ ---------- */
+const WX=[['sun','晴れ','<circle cx="12" cy="12" r="4"/><path d="M12 2.5v2.5M12 19v2.5M2.5 12H5M19 12h2.5M5.2 5.2l1.8 1.8M17 17l1.8 1.8M5.2 18.8L7 17M17 7l1.8-1.8"/>'],
+ ['cloud','くもり','<path d="M7 18h10a4 4 0 0 0 .5-8 6 6 0 0 0-11.4 1.5A3.3 3.3 0 0 0 7 18z"/>'],
+ ['rain','雨','<path d="M7 14h10a4 4 0 0 0 .5-8 6 6 0 0 0-11.4 1.5A3.3 3.3 0 0 0 7 14z"/><path d="M8 17l-1 3M12 17l-1 3M16 17l-1 3"/>'],
+ ['snow','雪','<path d="M12 3v18M4.2 7.5l15.6 9M4.2 16.5l15.6-9"/>']];
+const FEEL=[['5','とても良い'],['4','良い'],['3','ふつう'],['2','いまひとつ'],['1','つかれた']];
+const face=v=>{const m={5:'M8 14q4 4 8 0',4:'M8.5 14.5q3.5 2.5 7 0',3:'M8.5 15h7',2:'M8.5 16q3.5-2 7 0',1:'M8 16.5q4-3.5 8 0'}[v];return `<circle cx="12" cy="12" r="8.5"/><circle cx="9" cy="10" r=".8" fill="currentColor"/><circle cx="15" cy="10" r=".8" fill="currentColor"/><path d="${m}"/>`};
+let D=null,memoTimer=null;
+function renderDay(){
+  const d=parse(cur);D=load(cur);
+  const yd=Math.round((d-new Date(d.getFullYear(),0,1))/864e5)+1,yl=(new Date(d.getFullYear()+1,0,1)-new Date(d.getFullYear(),0,1))/864e5;
+  $('dNum').innerHTML=`<small>${d.getMonth()+1}.</small>${d.getDate()}`;
+  const hol=HOLN[cur];const wcol=d.getDay()===0||hol?'sun':d.getDay()===6?'sat':'';
+  $('dW').className='w '+wcol;$('dW').textContent=WJ[d.getDay()];
+  $('dS').textContent=`${d.getFullYear()}年（令和${d.getFullYear()-2018}年）${cur===today()?' · 今日':''}`;
+  let b='';if(hol)b+=`<span class="badge hol">${hol}</span>`;
+  taxOn(cur).forEach(x=>b+=`<span class="badge tax">${x.title}</span>`);
+  const diff=Math.round((d-parse(today()))/864e5);if(diff)b+=`<span class="badge">${diff>0?diff+'日後':(-diff)+'日前'}</span>`;
+  $('dBadges').innerHTML=b;
+  renderEv();renderTd();
+  $('memo').value=D.memo||'';
+  $('weather').innerHTML=WX.map(([k,t,p])=>`<button type="button" data-k="${k}" class="${D.wx===k?'on':''}"><svg viewBox="0 0 24 24">${p}</svg>${t}</button>`).join('');
+  $('feel').innerHTML=FEEL.map(([k,t])=>`<button type="button" data-k="${k}" class="${D.feel===k?'on':''}" aria-label="${t}"><svg viewBox="0 0 24 24">${face(k)}</svg></button>`).join('');
+  $('weather').querySelectorAll('button').forEach(x=>x.addEventListener('click',()=>{D.wx=D.wx===x.dataset.k?'':x.dataset.k;store(cur,D);renderDay()}));
+  $('feel').querySelectorAll('button').forEach(x=>x.addEventListener('click',()=>{D.feel=D.feel===x.dataset.k?'':x.dataset.k;store(cur,D);renderDay()}));
+  $('fL').textContent=`${yd}／${yl}`;$('fR').textContent=`のこり ${yl-yd} 日`;
+  showPhoto();
+}
+function renderEv(){
+  D.ev.sort((a,b)=>(a.t||'99').localeCompare(b.t||'99'));
+  $('evs').innerHTML=D.ev.map((e,i)=>`<div class="ev"><input type="time" value="${e.t||''}" data-i="${i}" data-f="t" aria-label="時刻"><input type="text" value="${(e.x||'').replace(/"/g,'&quot;')}" data-i="${i}" data-f="x" placeholder="予定" aria-label="予定"><button class="x" type="button" data-i="${i}" aria-label="削除">×</button></div>`).join('')||'<p class="note" style="margin:8px 0">予定はありません。</p>';
+  $('evs').querySelectorAll('input').forEach(el=>{el.addEventListener('input',()=>{D.ev[el.dataset.i][el.dataset.f]=el.value;store(cur,D)});if(el.type==='time')el.addEventListener('change',()=>{renderEv()})});
+  $('evs').querySelectorAll('.x').forEach(el=>el.addEventListener('click',()=>{D.ev.splice(el.dataset.i,1);store(cur,D);renderEv()}));
+}
+function renderTd(){
+  $('tds').innerHTML=D.td.map((t,i)=>`<div class="td${t.d?' done':''}"><input type="checkbox" ${t.d?'checked':''} data-i="${i}" aria-label="完了"><input type="text" value="${(t.x||'').replace(/"/g,'&quot;')}" data-i="${i}" placeholder="やること" aria-label="やること"><button class="x" type="button" data-i="${i}" aria-label="削除">×</button></div>`).join('')||'<p class="note" style="margin:8px 0">やることはありません。</p>';
+  $('tds').querySelectorAll('input[type=checkbox]').forEach(el=>el.addEventListener('change',()=>{D.td[el.dataset.i].d=el.checked;store(cur,D);renderTd()}));
+  $('tds').querySelectorAll('input[type=text]').forEach(el=>el.addEventListener('input',()=>{D.td[el.dataset.i].x=el.value;store(cur,D)}));
+  $('tds').querySelectorAll('.x').forEach(el=>el.addEventListener('click',()=>{D.td.splice(el.dataset.i,1);store(cur,D);renderTd()}));
+}
+$('addEv').addEventListener('click',()=>{D.ev.push({t:'',x:''});renderEv();const ins=$('evs').querySelectorAll('input[type=text]');ins[ins.length-1].focus()});
+$('addTd').addEventListener('click',()=>{D.td.push({x:'',d:false});renderTd();const ins=$('tds').querySelectorAll('input[type=text]');ins[ins.length-1].focus()});
+$('memo').addEventListener('input',()=>{D.memo=$('memo').value;clearTimeout(memoTimer);memoTimer=setTimeout(()=>store(cur,D),300)});
+async function showPhoto(){
+  const k=cur,v=D.ph?await phGet(k):null;if(k!==cur)return;
+  $('photo').innerHTML=v?`<img src="${v}" alt="${k}の写真">`:'';$('delPh').hidden=!v;$('phBtn').hidden=!!v;
+}
+$('phIn').addEventListener('change',async()=>{
+  const f=$('phIn').files[0];if(!f)return;
+  const url=URL.createObjectURL(f);const img=new Image();
+  img.onload=async()=>{const m=1400,s=Math.min(1,m/Math.max(img.width,img.height));const c=document.createElement('canvas');c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);const data=c.toDataURL('image/jpeg',0.82);URL.revokeObjectURL(url);
+    if(await phPut(cur,data)){D.ph=true;store(cur,D);showPhoto();toast('写真を貼りました')}else toast('写真を保存できませんでした')};
+  img.src=url;$('phIn').value='';
+});
+$('delPh').addEventListener('click',async()=>{await phPut(cur,null);D.ph=false;store(cur,D);showPhoto()});
+function go(k){cur=k;renderDay();window.scrollTo(0,0)}
+const step=n=>{const d=parse(cur);d.setDate(d.getDate()+n);go(key(d))};
+$('prevD').addEventListener('click',()=>step(-1));$('nextD').addEventListener('click',()=>step(1));
+let tx=null,ty=null;const dayEl=$('v-day');
+dayEl.addEventListener('touchstart',e=>{if(e.target.closest('input,textarea'))return tx=null;tx=e.touches[0].clientX;ty=e.touches[0].clientY},{passive:true});
+dayEl.addEventListener('touchend',e=>{if(tx===null)return;const dx=e.changedTouches[0].clientX-tx,dy=e.changedTouches[0].clientY-ty;if(Math.abs(dx)>70&&Math.abs(dy)<50)step(dx<0?1:-1);tx=null},{passive:true});
+
+/* ---------- 月 ---------- */
+function summary(k){const o=load(k);const items=[];o.ev.filter(e=>e.x).forEach(e=>items.push((e.t?e.t+' ':'')+e.x));o.td.filter(t=>t.x&&!t.d).forEach(t=>items.push('□ '+t.x));return {o,items,has:!isEmpty(o)}}
+function renderMonth(){
+  const y=mCur.getFullYear(),m=mCur.getMonth();
+  $('mT').innerHTML=`${m+1}<small>${y}年</small>`;
+  const first=new Date(y,m,1),off=(first.getDay()-CFG.ws+7)%7,start=new Date(y,m,1-off);
+  const wds=[...Array(7)].map((_,i)=>(i+CFG.ws)%7);
+  let h=wds.map(w=>`<div class="wd ${w===0?'sun':w===6?'sat':''}">${W[w]}</div>`).join('');
+  const weeks=Math.ceil((off+new Date(y,m+1,0).getDate())/7);
+  for(let i=0;i<weeks*7;i++){
+    const d=new Date(start);d.setDate(start.getDate()+i);const k=key(d),hol=HOLN[k],s=summary(k),tx=taxOn(k);
+    const col=d.getDay()===0||hol?'sun':d.getDay()===6?'sat':'';
+    let lines=s.items.slice(0,3).map(t=>`<span class="l">${t.replace(/</g,'&lt;')}</span>`).join('');
+    if(hol)lines=`<span class="l hol">${hol}</span>`+lines;
+    if(tx.length)lines+=`<span class="l tax">${tx[0].title.replace('源泉所得税の納付','源泉納付').replace(/（.*?）/,'')}</span>`;
+    h+=`<button type="button" class="cell${d.getMonth()!==m?' out':''}${k===today()?' today':''}" data-k="${k}"><span class="n ${col}"><span>${d.getDate()}</span>${s.has&&!s.items.length?'<i class="dot"></i>':''}</span>${lines}</button>`;
+  }
+  $('cal').innerHTML=h;
+  $('cal').querySelectorAll('.cell').forEach(c=>c.addEventListener('click',()=>{cur=c.dataset.k;show('day')}));
+}
+$('prevM').addEventListener('click',()=>{mCur=new Date(mCur.getFullYear(),mCur.getMonth()-1,1);renderMonth()});
+$('nextM').addEventListener('click',()=>{mCur=new Date(mCur.getFullYear(),mCur.getMonth()+1,1);renderMonth()});
+
+/* ---------- 週 ---------- */
+function renderWeek(){
+  const d0=new Date(wCur);d0.setDate(d0.getDate()-((d0.getDay()-CFG.ws+7)%7));
+  const d6=new Date(d0);d6.setDate(d0.getDate()+6);
+  $('wT').innerHTML=`${d0.getMonth()+1}.${d0.getDate()}<small>〜 ${d6.getMonth()+1}.${d6.getDate()}</small>`;
+  let h='';
+  for(let i=0;i<7;i++){const d=new Date(d0);d.setDate(d0.getDate()+i);const k=key(d),hol=HOLN[k],o=load(k),tx=taxOn(k);
+    const col=d.getDay()===0||hol?'sun':d.getDay()===6?'sat':'';
+    const li=[];if(hol)li.push(`<span class="li sun">${hol}</span>`);tx.forEach(x=>li.push(`<span class="li" style="color:var(--tax)">${x.title}</span>`));
+    o.ev.filter(e=>e.x).forEach(e=>li.push(`<span class="li">${e.t?`<b>${e.t}</b>`:''}${e.x.replace(/</g,'&lt;')}</span>`));
+    const open=o.td.filter(t=>t.x&&!t.d).length,done=o.td.filter(t=>t.x&&t.d).length;
+    if(open||done)li.push(`<span class="li em">やること ${done}／${open+done}</span>`);
+    if(o.memo.trim())li.push(`<span class="li em">${o.memo.trim().split('\n')[0].replace(/</g,'&lt;')}</span>`);
+    h+=`<button type="button" class="wd2${k===today()?' today':''}" data-k="${k}"><span class="dn ${col}">${d.getDate()}<small>${W[d.getDay()]}</small></span><span class="ul">${li.join('')||'<span class="li em">—</span>'}</span></button>`;
+  }
+  $('wk').innerHTML=h;
+  $('wk').querySelectorAll('.wd2').forEach(c=>c.addEventListener('click',()=>{cur=c.dataset.k;show('day')}));
+}
+$('prevW').addEventListener('click',()=>{wCur.setDate(wCur.getDate()-7);renderWeek()});
+$('nextW').addEventListener('click',()=>{wCur.setDate(wCur.getDate()+7);renderWeek()});
+
+/* ---------- 年 ---------- */
+function renderYear(){
+  $('yT').innerHTML=`${yCur}<small>令和${yCur-2018}年</small>`;
+  const has=new Set(allKeys());let h='';
+  for(let m=0;m<12;m++){
+    const first=new Date(yCur,m,1),off=(first.getDay()-CFG.ws+7)%7,n=new Date(yCur,m+1,0).getDate();
+    let g=[...Array(7)].map((_,i)=>{const w=(i+CFG.ws)%7;return `<span class="${w===0?'sun':w===6?'sat':''}">${W[w]}</span>`}).join('')+'<span></span>'.repeat(off);
+    for(let d=1;d<=n;d++){const k=yCur+'-'+pad(m+1)+'-'+pad(d),dt=new Date(yCur,m,d),hol=HOLN[k];
+      g+=`<span class="${has.has(k)?'has':''} ${k===today()?'td':''} ${(dt.getDay()===0||hol)&&!has.has(k)?'sun':dt.getDay()===6&&!has.has(k)?'sat':''}">${d}</span>`}
+    h+=`<button type="button" class="ym" data-m="${m}"><span class="h3">${m+1}月</span><span class="g">${g}</span></button>`;
+  }
+  $('yr').innerHTML=h;
+  $('yr').querySelectorAll('.ym').forEach(b=>b.addEventListener('click',()=>{mCur=new Date(yCur,+b.dataset.m,1);show('month')}));
+}
+$('prevY').addEventListener('click',()=>{yCur--;renderYear()});$('nextY').addEventListener('click',()=>{yCur++;renderYear()});
+
+/* ---------- 検索・設定 ---------- */
+$('q').addEventListener('input',()=>{
+  const q=$('q').value.trim();if(!q){$('hits').innerHTML='';return}
+  const res=[];allKeys().reverse().forEach(k=>{const o=load(k);const t=[...o.ev.map(e=>e.x),...o.td.map(t=>t.x),o.memo].filter(Boolean).find(s=>s.includes(q));if(t)res.push([k,t])});
+  $('hits').innerHTML=res.slice(0,50).map(([k,t])=>{const i=t.indexOf(q);const sn=t.slice(Math.max(0,i-12),i+28).replace(/</g,'&lt;');return `<button type="button" class="hit" data-k="${k}"><b>${k.slice(0,4)}.${+k.slice(5,7)}.${+k.slice(8)}</b>${sn}</button>`}).join('')||'<p class="note">見つかりませんでした。</p>';
+  $('hits').querySelectorAll('.hit').forEach(b=>b.addEventListener('click',()=>{cur=b.dataset.k;show('day')}));
+});
+for(let m=1;m<=12;m++)$('sFm').add(new Option(`法人の決算月：${m}月`,m));
+$('sTax').checked=CFG.tax;$('sFm').value=CFG.fm;$('sNou').checked=CFG.nou;$('sWs').value=CFG.ws;
+$('sTax').addEventListener('change',()=>{CFG.tax=$('sTax').checked;saveCfg()});
+$('sFm').addEventListener('change',()=>{CFG.fm=+$('sFm').value;saveCfg()});
+$('sNou').addEventListener('change',()=>{CFG.nou=$('sNou').checked;saveCfg()});
+$('sWs').addEventListener('change',()=>{CFG.ws=+$('sWs').value;saveCfg()});
+function stat(){const ks=allKeys();$('stat').textContent=ks.length?`書いてある日：${ks.length}日（${ks[0]} 〜 ${ks[ks.length-1]}）`:'まだ何も書いていません。'}
+$('exp').addEventListener('click',async()=>{
+  const data={app:'ichinichi',v:1,at:new Date().toISOString(),cfg:CFG,days:{},photos:{}};
+  for(const k of allKeys()){data.days[k]=load(k);if(data.days[k].ph){const p=await phGet(k);if(p)data.photos[k]=p}}
+  const name=`一日帖_${key(new Date())}.json`,blob=new Blob([JSON.stringify(data)],{type:'application/json'});
+  const file=new File([blob],name,{type:'application/json'});
+  try{if(navigator.canShare&&navigator.canShare({files:[file]})){await navigator.share({files:[file],title:name});return}}catch(e){if(e&&e.name==='AbortError')return}
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+});
+$('imp').addEventListener('change',async()=>{
+  const f=$('imp').files[0];if(!f)return;
+  try{const data=JSON.parse(await f.text());if(data.app!=='ichinichi')throw 0;
+    let n=0;for(const [k,o] of Object.entries(data.days||{})){const curO=load(k);const merged=isEmpty(curO)?o:curO;store(k,merged);n++}
+    for(const [k,p] of Object.entries(data.photos||{})){if(!(await phGet(k)))await phPut(k,p)}
+    toast(`${n}日分を戻しました（今ある内容は上書きしません）`);stat();
+  }catch(e){toast('このファイルは読み込めません')}
+  $('imp').value='';
+});
+
+/* ---------- タブ ---------- */
+function show(t){tab=t;document.querySelectorAll('nav.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.tab===t));
+  ['day','week','month','year','set'].forEach(v=>$('v-'+v).hidden=v!==t);
+  if(t==='day')renderDay();if(t==='month')renderMonth();if(t==='week'){wCur=parse(cur);renderWeek()}if(t==='year')renderYear();if(t==='set')stat();window.scrollTo(0,0)}
+document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>{if(b.dataset.tab==='day'&&tab==='day'){cur=today()}if(b.dataset.tab==='month')mCur=parse(cur);show(b.dataset.tab)}));
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&tab==='day')renderDay()});
+renderDay();
+if('serviceWorker' in navigator){addEventListener('load',()=>navigator.serviceWorker.register('sw.js').catch(()=>{}))}
+})();
+</script>
+</body>
+</html>
